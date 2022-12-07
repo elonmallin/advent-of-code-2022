@@ -1,34 +1,59 @@
-$data = Get-Content -Path "$PSScriptRoot/input.example.txt"
+$data = Get-Content -Path "$PSScriptRoot/input.txt"
 
-$directoryTree = @{}
-$fullPath = "/"
+function Get-FolderSize {
+    param(
+        [string]$Key,
+        [hashtable]$Mem,
+        [string[]]$Lines
+    )
 
-foreach ($line in $data[2..($data.Length-1)]) {
-    if ($line.StartsWith("`$ cd ")) {
-        $cd = ($line -split "cd ")[1]
-        if ($cd -eq "..") {
-            $idx = $fullPath.LastIndexOf("/")
-            $fullPath = $fullPath.Substring(0, $idx)
-        }
-        else {
-            if ($fullPath -eq "/") {
-                $fullPath += "$cd"
+    for ($i = 0; $i -lt $Lines.Length; $i += 1) {
+        $line = $Lines[$i]
+
+        if ($line.StartsWith("`$ cd ")) {
+            $Key = ($line -split "cd ")[1]
+
+            if ($Key -eq "..") {
+                return $Lines[($i+1)..($Lines.Length-1)]
             }
-            else {
-                $fullPath += "/$cd"
+
+            if (-not $Mem.ContainsKey($Key)) {
+                $Mem[$Key] = @{ Size=0 }
             }
         }
-    }
-    elseif ($line -eq "`$ ls") {
-
-    }
-    else {
-        if (-not $directoryTree.ContainsKey($fullPath)) {
-            $directoryTree[$fullPath] = @()
+        elseif ($line -eq "`$ ls") {
+            $Lines = Get-FolderSize -Key $Key -Mem $Mem[$Key] -Lines $Lines[($i+1)..($Lines.Length-1)]
+            $Mem.Size += $Mem[$Key].Size
+            $i = -1
         }
+        elseif (-not $line.StartsWith("dir")) {
+            $size = [int](($line -split " ")[0])
 
-        $directoryTree[$fullPath] += $line
+            $Mem.Size += $size
+        }
     }
+
+    return @()
 }
 
-$directoryTree
+function Get-Sizes {
+    param (
+        [hashtable]$Mem
+    )
+    
+    $Size = 0
+
+    foreach ($key in $Mem.Keys | Where-Object { $_ -ne "Size" }) {
+        if ($Mem[$key].Size -lt 100000) {
+            $Size += $Mem[$key].Size
+        }
+        $Size += Get-Sizes -Mem $Mem[$key]
+    }
+
+    return $Size
+}
+
+$mem = @{}
+Get-FolderSize -Key "" -Mem $mem -Lines $data
+
+Get-Sizes -Mem $mem
