@@ -1,9 +1,8 @@
 $data = Get-Content -Path "$PSScriptRoot/input.txt"
 
-function Get-FolderSize {
+function Resolve-Tree {
     param(
-        [string]$Key,
-        [hashtable]$Mem,
+        [hashtable]$Tree,
         [string[]]$Lines
     )
 
@@ -11,25 +10,23 @@ function Get-FolderSize {
         $line = $Lines[$i]
 
         if ($line.StartsWith("`$ cd ")) {
-            $Key = ($line -split "cd ")[1]
+            $key = ($line -split "cd ")[1]
 
-            if ($Key -eq "..") {
+            if ($key -eq "..") {
                 return $Lines[($i+1)..($Lines.Length-1)]
             }
 
-            if (-not $Mem.ContainsKey($Key)) {
-                $Mem[$Key] = @{ Size=0 }
+            if (-not $Tree.ContainsKey($key)) {
+                $Tree[$key] = @{ Size=0 }
             }
         }
         elseif ($line -eq "`$ ls") {
-            $Lines = Get-FolderSize -Key $Key -Mem $Mem[$Key] -Lines $Lines[($i+1)..($Lines.Length-1)]
-            $Mem.Size += $Mem[$Key].Size
+            $Lines = Resolve-Tree -Key $key -Tree $Tree[$key] -Lines $Lines[($i+1)..($Lines.Length-1)]
+            $Tree.Size += $Tree[$key].Size
             $i = -1
         }
         elseif (-not $line.StartsWith("dir")) {
-            $size = [int](($line -split " ")[0])
-
-            $Mem.Size += $size
+            $Tree.Size += [int](($line -split " ")[0])
         }
     }
 
@@ -38,24 +35,24 @@ function Get-FolderSize {
 
 function Get-Sizes {
     param (
-        [hashtable]$Mem,
+        [hashtable]$Tree,
         [int[]]$Sizes
     )
 
-    foreach ($key in $Mem.Keys | Where-Object { $_ -ne "Size" }) {
-        $Sizes += $Mem[$key].Size
-        $Sizes = Get-Sizes -Mem $Mem[$key] -Sizes $Sizes
+    foreach ($key in $Tree.Keys | Where-Object { $_ -ne "Size" }) {
+        $Sizes += $Tree[$key].Size
+        $Sizes = Get-Sizes -Tree $Tree[$key] -Sizes $Sizes
     }
 
     return $Sizes
 }
 
-$mem = @{}
-Get-FolderSize -Key "" -Mem $mem -Lines $data
+$tree = @{}
+Resolve-Tree -Tree $tree -Lines $data
 
-$deleteSize = 30000000 - (70000000 - $mem.Size)
+$deleteSize = 30000000 - (70000000 - $tree.Size)
 
-Get-Sizes -Mem $mem -Sizes @() |
+Get-Sizes -Tree $tree -Sizes @() |
     Where-Object { $_ -ge $deleteSize } |
     Sort-Object |
     Select-Object -First 1
