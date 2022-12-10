@@ -32,3 +32,6 @@ foreach ($line in $data) {
 }
 
 $image
+
+. "$PSScriptRoot/ConvertTo-Letters.ps1"
+ConvertTo-Letters -CrtInput $image
