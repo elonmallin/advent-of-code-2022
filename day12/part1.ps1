@@ -1,6 +1,49 @@
-$data = Get-Content -Path "$PSScriptRoot/input.txt"
+$data = Get-Content -Path "$PSScriptRoot/input.example.txt"
 
 $data = $data | ForEach-Object { ,($_.ToCharArray() | ForEach-Object { [int]$_ }) }
+
+function New-Graph {
+    param (
+        $Data
+    )
+
+    $graph = [ordered]@{}
+    
+    for ($y = 0; $y -lt $Data.Count; $y++) {
+        for ($x = 0; $x -lt $Data[$y].Count; $x++) {
+            $v = $Data[$y][$x]
+            if ($Data[$y][$x] -eq [int][char]'S') {
+                $graph["s"] = "$x`:$y"
+                $v = [int][char]'a'
+            }
+            if ($Data[$y][$x] -eq [int][char]'E') {
+                $graph["e"] = "$x`:$y"
+                $v = [int][char]'z'
+            }
+            $graph["$x`:$y"] = [ordered]@{ value=$v; graph=[ordered]@{} }
+        }
+    }
+
+    for ($y = 0; $y -lt $Data.Count; $y++) {
+        for ($x = 0; $x -lt $Data[$y].Count; $x++) {
+            $dir = @(@(1,0),@(0,1),@(-1,0),@(0,-1))
+            foreach ($d in $dir) {
+                $x2 = $x + $d[0]
+                $y2 = $y + $d[1]
+                if (Test-OutOfBounds -HeightMap $Data -X $x2 -Y $y2) {
+                    continue
+                }
+                if (-not (Test-StepWithinReach -Height $graph["$x`:$y"].value -NextHeight $graph["$x2`:$y2"].value)) {
+                    continue
+                }
+
+                $graph["$x`:$y"].graph["$x2`:$y2"] = $graph["$x2`:$y2"]
+            }
+        }
+    }
+
+    return $graph
+}
 
 function Test-OutOfBounds {
     param (
@@ -24,6 +67,9 @@ function Test-StepWithinReach {
     
     return ($Height -eq $NextHeight -or $Height + 1 -eq $NextHeight)
 }
+
+$graph = New-Graph -Data $data
+$graph
 
 function Get-ShortestPath {
     param(
