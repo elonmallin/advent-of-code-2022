@@ -1,26 +1,32 @@
-$data = Get-Content -Path "$PSScriptRoot/input.example.txt"
+Import-Module Prelude
+$data = Get-Content -Path "$PSScriptRoot/input.txt"
 
 $data = $data | ForEach-Object { ,($_.ToCharArray() | ForEach-Object { [int]$_ }) }
 
-function New-Graph {
+function My-Graph {
     param (
         $Data
     )
 
     $graph = [ordered]@{}
+    $s = ""
+    $e = ""
+    $nodes = @{}
+    $edges = @()
     
     for ($y = 0; $y -lt $Data.Count; $y++) {
         for ($x = 0; $x -lt $Data[$y].Count; $x++) {
             $v = $Data[$y][$x]
             if ($Data[$y][$x] -eq [int][char]'S') {
-                $graph["s"] = "$x`:$y"
+                $s = "$x`:$y"
                 $v = [int][char]'a'
             }
             if ($Data[$y][$x] -eq [int][char]'E') {
-                $graph["e"] = "$x`:$y"
+                $e = "$x`:$y"
                 $v = [int][char]'z'
             }
             $graph["$x`:$y"] = [ordered]@{ value=$v; graph=[ordered]@{} }
+            $nodes["$x`:$y"] = [Node]"$x`:$y"
         }
     }
 
@@ -37,12 +43,20 @@ function New-Graph {
                     continue
                 }
 
+                $edges += [Edge]::New($nodes["$x`:$y"], $nodes["$x2`:$y2"])
                 $graph["$x`:$y"].graph["$x2`:$y2"] = $graph["$x2`:$y2"]
             }
         }
     }
 
-    return $graph
+    # $nodeList = @()
+    # foreach ($n in $nodes.Keys) {
+    #     $nodeList += $nodes[$n]
+    # }
+    # $myg = [Graph]::New($nodeList, $edges)
+    # $myg.GetShortestPathLength($nodes[$s], $nodes[$e])
+
+    return $graph, $s, $e
 }
 
 function Test-OutOfBounds {
@@ -68,8 +82,56 @@ function Test-StepWithinReach {
     return ($Height -eq $NextHeight -or $Height + 1 -eq $NextHeight)
 }
 
-$graph = New-Graph -Data $data
-$graph
+$graph, $s, $e = My-Graph -Data $data
+
+
+function Djikstra {
+    param (
+        $Graph,
+        $Start
+    )
+    
+    $visited = @{}
+    $parentsMap = @{}
+    $pq = New-Object System.Collections.Generic.Queue[string]
+    $nodeCosts = @{}
+    $nodeCosts[$Start] = 0
+    $pq.Enqueue($Start)
+
+    while ($pq.Count -gt 0) {
+        $node = $pq.Dequeue()
+        $visited[$node] = $true
+
+        foreach ($adjNode in $Graph[$node].graph.GetEnumerator()) {
+            if ($visited.ContainsKey($adjNode.Key)) {
+                continue
+            }
+
+            $newCost = $nodeCosts[$node]
+            if (-not $nodeCosts.ContainsKey($adjNode.Key)) {
+                $nodeCosts[$adjNode.Key] = [int]::MaxValue
+            }
+            if ($nodeCosts[$adjNode.Key] -gt $newCost) {
+                $parentsMap[$adjNode.Key] = $node
+                $nodeCosts[$adjNode.Key] = $newCost
+                $pq.Enqueue($adjNode.Key)
+            }
+        }
+    }
+
+    return $parentsMap, $nodeCosts
+}
+
+$par, $nc = Djikstra -Graph $graph -Start $s
+$k = $par[$e]
+$i = 0
+while ($k) {
+    $i++
+    $k = $par[$k]
+    if ($k -eq $s) {
+        break
+    }
+}
 
 function Get-ShortestPath {
     param(
