@@ -1,4 +1,4 @@
-$data = Get-Content -Path "$PSScriptRoot/input.example.txt"
+$data = Get-Content -Path "$PSScriptRoot/input.txt"
 
 $data = $data | ForEach-Object { ,($_.ToCharArray() | ForEach-Object { [int]$_ }) }
 
