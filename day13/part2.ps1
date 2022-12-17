@@ -44,13 +44,13 @@ $pairs.Sort({
 
 $res = 1
 for ($i = 0; $i -lt $pairs.Count; $i++) {
-    if (Compare-Object $pairs[$i] @(@(2)) -IncludeEqual -ExcludeDifferent) {
+    $json = ,$pairs[$i] | ConvertTo-Json -Compress -Depth 99
+    if ($json -eq "[[2]]") {
         $res *= $i+1
     }
-    if (Compare-Object $pairs[$i] @(@(6)) -IncludeEqual -ExcludeDifferent) {
+    if ($json -eq "[[6]]") {
         $res *= $i+1
     }
 }
 
 $res
-
