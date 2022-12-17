@@ -48,6 +48,11 @@ foreach ($line in $lines) {
     foreach ($coord in $line[1..($line.Count-1)]) {
         Write-RockLine $cave $p $coord
         $p = $coord
+
+        # Clear-Host
+        # $cave | Format-Cave | Write-Host -NoNewline
+        # Start-Sleep -Milliseconds 300
+        
     }
 }
 
