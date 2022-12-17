@@ -38,7 +38,7 @@ $i = 0
 $sum = 0
 foreach ($pair in $pairs) {
     $i++
-    $l, $r = $pair[0], $pair[1] | % { $_ -replace "`r?`n", "" | ConvertFrom-Json -NoEnumerate }
+    $l, $r = $pair[0], $pair[1] | % { $_ | ConvertFrom-Json -NoEnumerate }
 
     if ((Test-Order $l $r) -eq -1) {
         $sum += $i
