@@ -100,6 +100,6 @@ do {
 
 $caveRect = Get-CaveRect $Cave
 Write-RockLine $cave @(($caveRect[0]-2),($caveRect[3]+1)) @(($caveRect[2]+2),($caveRect[3]+1))
-$cave | Format-Cave
+$cave | Format-Cave > "$PSScriptRoot/cave.txt"
 
 ($cave.Values | Where-Object { $_ -eq "o" }).Count
