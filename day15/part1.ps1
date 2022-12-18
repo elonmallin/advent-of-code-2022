@@ -1,4 +1,4 @@
-$data = Get-Content -Path "$PSScriptRoot/input.example.txt"
+$data = Get-Content -Path "$PSScriptRoot/input.txt"
 
 $sensorsAndBeacons = $data | % {
     $s, $b = $_ -split ":"
@@ -49,15 +49,27 @@ function Get-ManhattanDistance {
 
 function Write-MapData {
     param (
-        $Map, $S, $B, $D
+        $Map, $S, $B, $D, $R
     )
 
     $Map["$($S[0])`:$($S[1])"] = "S"
     $Map["$($B[0])`:$($B[1])"] = "B"
+
+    if ([int]$S[1] - $D -gt $R -or [int]$S[1] + $D -lt $R) {
+        return
+    }
+
+    if ($R -lt $S[1]) {
+        $i = $D - ($S[1] - $R)
+    }
+    if ($R -gt $S[1]) {
+        $i = $D + $R - $S[1]
+    }
     
-    for ($i = 0; $i -lt (($D*2)+1); $i++) {
+    # for ($i = 0; $i -lt (($D*2)+1); $i++) {
         $x = $S[0] - ($i -le $D ? $i : (($D*2) - $i))
         $y = $S[1] - ($D-$i)
+
         $fillCount = ($i -lt $D ? ($i + $i + 1) : (($D*2-$i) + ($D*2-$i) + 1))
         for ($j = 0; $j -lt $fillCount; $j++) {
             $x2 = $x + $j
@@ -66,17 +78,17 @@ function Write-MapData {
                 $Map[$k] = "#"
             }
         }
-    }
+    # }
 }
 
+$row = 2000000
 $map = @{}
 foreach ($sb in $sensorsAndBeacons) {
     $s, $b = $sb
     $d = Get-ManhattanDistance $s $b
-    Write-MapData $map $s $b $d
-    # $map | Format-Map
+    Write-MapData $map $s $b $d $row
 }
 
-$map | Format-Map > beacon.txt
+# $map | Format-Map
 
-($map.GetEnumerator() | Where-Object { ($_.Key -split ":")[1] -eq 10 -and $_.Value -eq "#" }).Count
+($map.GetEnumerator() | Where-Object { ($_.Key -split ":")[1] -eq $row -and $_.Value -eq "#" }).Count
